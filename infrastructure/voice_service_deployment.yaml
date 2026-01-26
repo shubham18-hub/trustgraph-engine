@@ -1,0 +1,347 @@
+# AWS CloudFormation template for TrustGraph Voice Service deployment
+# Deploys Bhashini-integrated voice processing with AWS fallback mechanisms
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'TrustGraph Voice-First Interaction Layer with Bhashini API integration'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: 'Deployment environment'
+  
+  BhashiniApiKey:
+    Type: String
+    NoEcho: true
+    Description: 'Bhashini API key for voice services'
+  
+  BhashiniBaseUrl:
+    Type: String
+    Default: 'https://bhashini.gov.in/api/v1'
+    Description: 'Bhashini API base URL'
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 30
+    MemorySize: 1024
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        BHASHINI_API_KEY: !Ref BhashiniApiKey
+        BHASHINI_BASE_URL: !Ref BhashiniBaseUrl
+        VOICE_ASSETS_BUCKET: !Ref VoiceAssetsBucket
+        LOG_LEVEL: 'INFO'
+    Layers:
+      - !Ref VoiceDependenciesLayer
+
+Resources:
+  # S3 Bucket for voice assets (audio files, transcripts)
+  VoiceAssetsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'trustgraph-voice-assets-${Environment}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVoiceFiles
+            Status: Enabled
+            ExpirationInDays: 30  # Delete voice files after 30 days
+          - Id: TransitionToIA
+            Status: Enabled
+            TransitionInDays: 7
+            StorageClass: STANDARD_IA
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST]
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # Lambda Layer for voice processing dependencies
+  VoiceDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'trustgraph-voice-dependencies-${Environment}'
+      Description: 'Dependencies for voice processing (aiohttp, boto3, etc.)'
+      ContentUri: ../lambda_layers/voice_dependencies/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Delete
+
+  # Main Voice Processing Lambda Function
+  VoiceProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'trustgraph-voice-processor-${Environment}'
+      CodeUri: ../src/
+      Handler: handlers.voice_handler.lambda_handler
+      Description: 'Voice processing with Bhashini API integration'
+      ReservedConcurrencyLimit: 100
+      Environment:
+        Variables:
+          BHASHINI_TIMEOUT: '10'
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref VoiceAssetsBucket
+        - TranscribeFullAccessPolicy: {}
+        - PollyFullAccessPolicy: {}
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        VoiceTranscribe:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoiceApiGateway
+            Path: /voice/transcribe
+            Method: POST
+        VoiceTranslate:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoiceApiGateway
+            Path: /voice/translate
+            Method: POST
+        VoiceSynthesize:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoiceApiGateway
+            Path: /voice/synthesize
+            Method: POST
+        VoiceCommand:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoiceApiGateway
+            Path: /voice/command
+            Method: POST
+        VoiceMilestone:
+          Type: Api
+          Properties:
+            RestApiId: !Ref VoiceApiGateway
+            Path: /voice/milestone
+            Method: POST
+
+  # API Gateway for voice services
+  VoiceApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'trustgraph-voice-api-${Environment}'
+      StageName: !Ref Environment
+      Description: 'API Gateway for TrustGraph voice services'
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Requested-With'"
+        AllowOrigin: "'*'"
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseTemplates:
+            application/json: |
+              {
+                "error": "Client Error",
+                "message": "$context.error.message",
+                "requestId": "$context.requestId"
+              }
+        DEFAULT_5XX:
+          ResponseTemplates:
+            application/json: |
+              {
+                "error": "Server Error", 
+                "message": "$context.error.message",
+                "requestId": "$context.requestId"
+              }
+      RequestValidators:
+        RequestValidator:
+          ValidateRequestBody: true
+          ValidateRequestParameters: true
+      Models:
+        VoiceCommandRequest:
+          type: object
+          required:
+            - audio_data
+            - user_id
+          properties:
+            audio_data:
+              type: string
+              description: 'Base64 encoded audio data'
+            user_id:
+              type: string
+              description: 'User identifier'
+            session_context:
+              type: object
+              properties:
+                preferred_language:
+                  type: string
+                  enum: ['hi', 'bn', 'te', 'mr', 'ta', 'gu', 'kn', 'ml', 'or', 'pa', 'as', 'ur', 'ne', 'ks', 'sd', 'mai', 'bho', 'gom', 'mni', 'sat', 'doi', 'brx']
+                name:
+                  type: string
+                location:
+                  type: string
+                literacy_level:
+                  type: string
+                  enum: ['basic', 'intermediate', 'advanced']
+
+  # CloudWatch Log Groups
+  VoiceProcessorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/trustgraph-voice-processor-${Environment}'
+      RetentionInDays: 30
+
+  # CloudWatch Alarms for monitoring
+  VoiceProcessorErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'trustgraph-voice-processor-errors-${Environment}'
+      AlarmDescription: 'Voice processor function errors'
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref VoiceProcessorFunction
+      AlarmActions:
+        - !Ref VoiceProcessorAlarmTopic
+
+  VoiceProcessorDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'trustgraph-voice-processor-duration-${Environment}'
+      AlarmDescription: 'Voice processor function high duration'
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 25000  # 25 seconds (close to 30s timeout)
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref VoiceProcessorFunction
+      AlarmActions:
+        - !Ref VoiceProcessorAlarmTopic
+
+  # SNS Topic for alarms
+  VoiceProcessorAlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'trustgraph-voice-processor-alarms-${Environment}'
+      DisplayName: 'TrustGraph Voice Processor Alarms'
+
+  # IAM Role for Transcribe service
+  TranscribeServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'trustgraph-transcribe-role-${Environment}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: transcribe.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: TranscribeS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${VoiceAssetsBucket}/*'
+
+  # API Gateway Usage Plan for rate limiting
+  VoiceApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: !Sub 'trustgraph-voice-usage-plan-${Environment}'
+      Description: 'Usage plan for TrustGraph voice API'
+      ApiStages:
+        - ApiId: !Ref VoiceApiGateway
+          Stage: !Ref Environment
+      Throttle:
+        BurstLimit: 100
+        RateLimit: 50
+      Quota:
+        Limit: 10000
+        Period: DAY
+
+  # Custom Domain for API Gateway (optional)
+  VoiceApiDomainName:
+    Type: AWS::ApiGateway::DomainName
+    Condition: HasCustomDomain
+    Properties:
+      DomainName: !Sub 'voice-api-${Environment}.trustgraph.gov.in'
+      CertificateArn: !Ref SSLCertificateArn
+      SecurityPolicy: TLS_1_2
+
+  # Route53 Record for custom domain (optional)
+  VoiceApiDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Condition: HasCustomDomain
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Sub 'voice-api-${Environment}.trustgraph.gov.in'
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt VoiceApiDomainName.DistributionDomainName
+        HostedZoneId: !GetAtt VoiceApiDomainName.DistributionHostedZoneId
+
+Conditions:
+  HasCustomDomain: !Not [!Equals [!Ref SSLCertificateArn, '']]
+
+Parameters:
+  SSLCertificateArn:
+    Type: String
+    Default: ''
+    Description: 'SSL Certificate ARN for custom domain (optional)'
+  
+  HostedZoneId:
+    Type: String
+    Default: ''
+    Description: 'Route53 Hosted Zone ID for custom domain (optional)'
+
+Outputs:
+  VoiceApiUrl:
+    Description: 'Voice API Gateway URL'
+    Value: !Sub 'https://${VoiceApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-VoiceApiUrl'
+
+  VoiceAssetsBucketName:
+    Description: 'S3 bucket for voice assets'
+    Value: !Ref VoiceAssetsBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-VoiceAssetsBucket'
+
+  VoiceProcessorFunctionArn:
+    Description: 'Voice processor Lambda function ARN'
+    Value: !GetAtt VoiceProcessorFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-VoiceProcessorFunctionArn'
+
+  BhashiniIntegrationStatus:
+    Description: 'Bhashini API integration status'
+    Value: 'Configured with fallback to AWS services'
+
+  SupportedLanguages:
+    Description: 'Supported languages for voice processing'
+    Value: 'Hindi, Bengali, Telugu, Marathi, Tamil, Gujarati, Kannada, Malayalam, Odia, Punjabi, Assamese, Urdu, Nepali, Kashmiri, Sindhi, Maithili, Bhojpuri, Konkani, Manipuri, Santali, Dogri, Bodo'

@@ -1,0 +1,613 @@
+# AWS CloudFormation template for TrustGraph Agentic Execution deployment
+# Deploys Lambda functions, DynamoDB tables, S3 buckets, and blockchain integration
+
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'TrustGraph Agentic Execution Layer with UPI payment automation and blockchain integration'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'dev'
+    AllowedValues: ['dev', 'staging', 'prod']
+    Description: 'Deployment environment'
+  
+  BlockchainNetworkId:
+    Type: String
+    Description: 'Amazon Managed Blockchain Network ID'
+  
+  BlockchainMemberId:
+    Type: String
+    Description: 'Blockchain Member ID'
+  
+  BlockchainNodeId:
+    Type: String
+    Description: 'Blockchain Node ID'
+
+Globals:
+  Function:
+    Runtime: python3.11
+    Timeout: 300  # 5 minutes for complex processing
+    MemorySize: 2048
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        BLOCKCHAIN_NETWORK_ID: !Ref BlockchainNetworkId
+        BLOCKCHAIN_MEMBER_ID: !Ref BlockchainMemberId
+        BLOCKCHAIN_NODE_ID: !Ref BlockchainNodeId
+        BLOCKCHAIN_CHANNEL: 'trustgraph-channel'
+        CHAINCODE_NAME: 'trustledger'
+        EVIDENCE_BUCKET: !Ref EvidenceBucket
+        MILESTONES_TABLE: !Ref MilestonesTable
+        PAYMENTS_TABLE: !Ref PaymentsTable
+        EVIDENCE_TABLE: !Ref EvidenceTable
+        UPI_PAYMENTS_TABLE: !Ref UPIPaymentsTable
+        LOG_LEVEL: 'INFO'
+    Layers:
+      - !Ref AgenticExecutionLayer
+
+Resources:
+  # S3 Bucket for evidence storage (photos, documents)
+  EvidenceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'trustgraph-evidence-${Environment}-${AWS::AccountId}'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldEvidence
+            Status: Enabled
+            ExpirationInDays: 2555  # 7 years retention for compliance
+          - Id: TransitionToIA
+            Status: Enabled
+            TransitionInDays: 30
+            StorageClass: STANDARD_IA
+          - Id: TransitionToGlacier
+            Status: Enabled
+            TransitionInDays: 365
+            StorageClass: GLACIER
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt AgenticExecutionFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: 'evidence/'
+                  - Name: suffix
+                    Value: '.jpg'
+
+  # DynamoDB table for milestones
+  MilestonesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'trustgraph-milestones-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: milestone_id
+          AttributeType: S
+        - AttributeName: worker_id
+          AttributeType: S
+        - AttributeName: employer_id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: milestone_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: worker-index
+          KeySchema:
+            - AttributeName: worker_id
+              KeyType: HASH
+            - AttributeName: status
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: employer-index
+          KeySchema:
+            - AttributeName: employer_id
+              KeyType: HASH
+            - AttributeName: status
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # DynamoDB table for payments
+  PaymentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'trustgraph-payments-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: payment_id
+          AttributeType: S
+        - AttributeName: milestone_id
+          AttributeType: S
+        - AttributeName: worker_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: payment_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: milestone-index
+          KeySchema:
+            - AttributeName: milestone_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: worker-index
+          KeySchema:
+            - AttributeName: worker_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # DynamoDB table for evidence
+  EvidenceTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'trustgraph-evidence-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: photo_id
+          AttributeType: S
+        - AttributeName: milestone_id
+          AttributeType: S
+        - AttributeName: worker_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: photo_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: milestone-index
+          KeySchema:
+            - AttributeName: milestone_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: worker-index
+          KeySchema:
+            - AttributeName: worker_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # DynamoDB table for UPI payments
+  UPIPaymentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'trustgraph-upi-payments-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: payment_id
+          AttributeType: S
+        - AttributeName: payee_upi_id
+          AttributeType: S
+        - AttributeName: initiated_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: payment_id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: payee-index
+          KeySchema:
+            - AttributeName: payee_upi_id
+              KeyType: HASH
+            - AttributeName: initiated_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+  # Lambda Layer for dependencies
+  AgenticExecutionLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'trustgraph-agentic-execution-${Environment}'
+      Description: 'Dependencies for agentic execution (PIL, aiohttp, cryptography, etc.)'
+      ContentUri: ../lambda_layers/agentic_execution/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Delete
+
+  # Main Agentic Execution Lambda Function
+  AgenticExecutionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'trustgraph-agentic-execution-${Environment}'
+      CodeUri: ../src/
+      Handler: handlers.agentic_execution_handler.lambda_handler
+      Description: 'Agentic execution for milestone verification and payment automation'
+      ReservedConcurrencyLimit: 50
+      Environment:
+        Variables:
+          FABRIC_ENDPOINT: !Sub 'https://${BlockchainNodeId}.${BlockchainMemberId}.${BlockchainNetworkId}.managedblockchain.${AWS::Region}.amazonaws.com'
+          FABRIC_CA_ENDPOINT: !Sub 'https://${BlockchainMemberId}.${BlockchainNetworkId}.managedblockchain.${AWS::Region}.amazonaws.com'
+      Policies:
+        - S3FullAccessPolicy:
+            BucketName: !Ref EvidenceBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MilestonesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EvidenceTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UPIPaymentsTable
+        - RekognitionDetectOnlyPolicy: {}
+        - Statement:
+            - Effect: Allow
+              Action:
+                - managedblockchain:*
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:trustgraph/*'
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+      Events:
+        ApiGatewayEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgenticExecutionApi
+            Path: /agentic/process
+            Method: POST
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref EvidenceBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: evidence/
+                  - Name: suffix
+                    Value: .jpg
+
+  # UPI Webhook Handler Function
+  UPIWebhookFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'trustgraph-upi-webhook-${Environment}'
+      CodeUri: ../src/
+      Handler: handlers.upi_webhook_handler.lambda_handler
+      Description: 'Handle UPI payment gateway webhooks'
+      ReservedConcurrencyLimit: 20
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UPIPaymentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:trustgraph/upi/*'
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: '*'
+      Events:
+        UPIWebhook:
+          Type: Api
+          Properties:
+            RestApiId: !Ref AgenticExecutionApi
+            Path: /upi/webhook
+            Method: POST
+
+  # Payment Status Checker Function (scheduled)
+  PaymentStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'trustgraph-payment-status-${Environment}'
+      CodeUri: ../src/
+      Handler: handlers.payment_status_handler.lambda_handler
+      Description: 'Check payment status and update records'
+      ReservedConcurrencyLimit: 10
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UPIPaymentsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:trustgraph/upi/*'
+      Events:
+        ScheduledCheck:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+            Description: 'Check payment status every 5 minutes'
+
+  # API Gateway for agentic execution
+  AgenticExecutionApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'trustgraph-agentic-api-${Environment}'
+      StageName: !Ref Environment
+      Description: 'API Gateway for TrustGraph agentic execution'
+      Cors:
+        AllowMethods: "'GET,POST,PUT,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization,X-Requested-With'"
+        AllowOrigin: "'*'"
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseTemplates:
+            application/json: |
+              {
+                "error": "Client Error",
+                "message": "$context.error.message",
+                "requestId": "$context.requestId"
+              }
+        DEFAULT_5XX:
+          ResponseTemplates:
+            application/json: |
+              {
+                "error": "Server Error", 
+                "message": "$context.error.message",
+                "requestId": "$context.requestId"
+              }
+      RequestValidators:
+        RequestValidator:
+          ValidateRequestBody: true
+          ValidateRequestParameters: true
+
+  # EventBridge Rule for payment completion events
+  PaymentCompletionRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: !Sub 'trustgraph-payment-completion-${Environment}'
+      Description: 'Route payment completion events'
+      EventPattern:
+        source: ['trustgraph.upi']
+        detail-type: ['Payment Completed']
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt PaymentCompletionProcessor.Arn
+          Id: 'PaymentCompletionTarget'
+
+  # Lambda function to process payment completion events
+  PaymentCompletionProcessor:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'trustgraph-payment-completion-${Environment}'
+      CodeUri: ../src/
+      Handler: handlers.payment_completion_handler.lambda_handler
+      Description: 'Process payment completion events'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MilestonesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PaymentsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - managedblockchain:*
+              Resource: '*'
+
+  # Permission for EventBridge to invoke Lambda
+  PaymentCompletionPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref PaymentCompletionProcessor
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt PaymentCompletionRule.Arn
+
+  # Permission for S3 to invoke Lambda
+  S3InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref AgenticExecutionFunction
+      Action: lambda:InvokeFunction
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub '${EvidenceBucket}/*'
+
+  # CloudWatch Log Groups
+  AgenticExecutionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/trustgraph-agentic-execution-${Environment}'
+      RetentionInDays: 30
+
+  UPIWebhookLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/trustgraph-upi-webhook-${Environment}'
+      RetentionInDays: 30
+
+  PaymentStatusLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/trustgraph-payment-status-${Environment}'
+      RetentionInDays: 30
+
+  # CloudWatch Alarms
+  AgenticExecutionErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'trustgraph-agentic-execution-errors-${Environment}'
+      AlarmDescription: 'Agentic execution function errors'
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref AgenticExecutionFunction
+      AlarmActions:
+        - !Ref AlertTopic
+
+  PaymentFailureAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'trustgraph-payment-failures-${Environment}'
+      AlarmDescription: 'High payment failure rate'
+      MetricName: PaymentFailures
+      Namespace: TrustGraph/Payments
+      Statistic: Sum
+      Period: 900  # 15 minutes
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref AlertTopic
+
+  # SNS Topic for alerts
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'trustgraph-agentic-alerts-${Environment}'
+      DisplayName: 'TrustGraph Agentic Execution Alerts'
+
+  # Secrets for blockchain certificates
+  BlockchainClientCertSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'trustgraph/blockchain/client-cert-${BlockchainMemberId}'
+      Description: 'Blockchain client certificate for TLS authentication'
+      SecretString: !Sub |
+        {
+          "certificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+        }
+
+  BlockchainClientKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'trustgraph/blockchain/client-key-${BlockchainMemberId}'
+      Description: 'Blockchain client private key'
+      SecretString: !Sub |
+        {
+          "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+        }
+
+  BlockchainCACertSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'trustgraph/blockchain/ca-cert-${BlockchainMemberId}'
+      Description: 'Blockchain CA certificate'
+      SecretString: !Sub |
+        {
+          "ca_certificate": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+        }
+
+  # Secrets for UPI gateway configuration
+  UPIGatewayConfigSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub 'trustgraph/upi/gateway-config'
+      Description: 'UPI gateway configuration and credentials'
+      SecretString: !Sub |
+        {
+          "primary_gateway": "paytm",
+          "fallback_gateway": "phonepe",
+          "merchant_id": "TRUSTGRAPH001",
+          "merchant_key": "your_merchant_key_here",
+          "api_endpoints": {
+            "paytm": "https://securegw.paytm.in/theia/api/v1/initiateTransaction",
+            "phonepe": "https://api.phonepe.com/apis/hermes/pg/v1/pay"
+          },
+          "webhook_secret": "your_webhook_secret_here",
+          "timeout": 30
+        }
+
+  # Custom metrics for business KPIs
+  MilestoneCompletionMetric:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref AgenticExecutionLogGroup
+      FilterPattern: '[timestamp, requestId, level="INFO", message="milestone_completed"]'
+      MetricTransformations:
+        - MetricNamespace: 'TrustGraph/Business'
+          MetricName: 'MilestonesCompleted'
+          MetricValue: '1'
+          DefaultValue: 0
+
+  PaymentSuccessMetric:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref UPIWebhookLogGroup
+      FilterPattern: '[timestamp, requestId, level="INFO", message="payment_completed"]'
+      MetricTransformations:
+        - MetricNamespace: 'TrustGraph/Payments'
+          MetricName: 'PaymentSuccesses'
+          MetricValue: '1'
+          DefaultValue: 0
+
+Outputs:
+  AgenticExecutionApiUrl:
+    Description: 'Agentic Execution API Gateway URL'
+    Value: !Sub 'https://${AgenticExecutionApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-AgenticExecutionApiUrl'
+
+  EvidenceBucketName:
+    Description: 'S3 bucket for evidence storage'
+    Value: !Ref EvidenceBucket
+    Export:
+      Name: !Sub '${AWS::StackName}-EvidenceBucket'
+
+  AgenticExecutionFunctionArn:
+    Description: 'Agentic execution Lambda function ARN'
+    Value: !GetAtt AgenticExecutionFunction.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-AgenticExecutionFunctionArn'
+
+  BlockchainIntegrationStatus:
+    Description: 'Blockchain integration configuration'
+    Value: !Sub 'Network: ${BlockchainNetworkId}, Member: ${BlockchainMemberId}, Node: ${BlockchainNodeId}'
+
+  UPIIntegrationStatus:
+    Description: 'UPI payment integration status'
+    Value: 'Configured with Paytm and PhonePe gateways'
+
+  DeploymentSummary:
+    Description: 'Deployment summary'
+    Value: 'Agentic execution layer deployed with milestone verification, geotagged photo validation, and automatic UPI payment disbursal'
