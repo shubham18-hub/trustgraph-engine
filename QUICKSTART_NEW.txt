@@ -1,0 +1,67 @@
+============================================
+TrustGraph Engine - Quick Start Guide
+============================================
+
+SYSTEM STATUS: All Core Features Integrated!
+Trust Score ✓ | Digital Wallet ✓ | Smart Contracts ✓
+
+============================================
+STEP 1: Install Dependencies
+============================================
+
+Run: SETUP.bat
+
+Or manually:
+    python -m pip install aiohttp fastapi uvicorn boto3 cryptography pyjwt
+
+============================================
+STEP 2: Start Application
+============================================
+
+    python app.py
+
+Access at: http://localhost:8000
+
+============================================
+NEW TRUSTGRAPH FEATURES
+============================================
+
+1. RESILIENCE SCORE (Reputation Capital)
+   GET  /api/trust-score/{worker_id}
+   POST /api/trust-score/{worker_id}/calculate
+
+2. DIGITAL WALLET (Self-Sovereign Identity)
+   GET  /api/wallet/{worker_id}
+   POST /api/wallet/{worker_id}/credentials
+
+3. MILESTONE CONTRACTS (Agentic Smart Contracts)
+   POST /api/contracts/create
+   POST /api/contracts/{id}/milestones/{mid}/submit-proof
+
+============================================
+EXAMPLE: Calculate Trust Score
+============================================
+
+curl -X POST http://localhost:8000/api/trust-score/user_123/calculate
+
+Response:
+{
+  "resilience_score": 720,
+  "category": "good",
+  "credit_eligibility": {
+    "eligible": true,
+    "max_loan_amount": 50000,
+    "interest_rate": 15.0
+  }
+}
+
+============================================
+DOCUMENTATION
+============================================
+
+Setup:       SETUP.bat
+Deployment:  DEPLOYMENT_GUIDE.md
+Status:      SYSTEM_STATUS_FINAL.md
+API Docs:    http://localhost:8000/docs
+
+============================================

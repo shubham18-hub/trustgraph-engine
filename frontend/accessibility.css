@@ -1,0 +1,369 @@
+/* WCAG 2.1 AA Accessibility Styles */
+
+/* Skip Link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--color-primary);
+    color: var(--text-inverse);
+    padding: var(--space-2) var(--space-4);
+    text-decoration: none;
+    font-weight: var(--font-weight-bold);
+    z-index: 10000;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Focus Indicators - WCAG 2.1 AA Compliant */
+*:focus {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+button:focus,
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* High Visibility Focus for Interactive Elements */
+.btn-primary:focus,
+.action-btn:focus,
+.nav-btn:focus,
+.voice-btn:focus {
+    outline: 4px solid var(--color-accent);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px rgba(0, 0, 128, 0.2);
+}
+
+/* Keyboard Navigation Indicators */
+.keyboard-user *:focus {
+    outline: 4px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
+/* Screen Reader Only Content */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.sr-only-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+}
+
+/* Large Touch Targets - Minimum 44x44px */
+button,
+.btn-primary,
+.action-btn,
+.nav-btn,
+.voice-btn,
+a {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Enhanced Contrast for Text */
+body {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+/* Ensure all text meets WCAG AA contrast ratio (4.5:1) */
+.text-primary {
+    color: #333333; /* Contrast ratio: 12.63:1 on white */
+}
+
+.text-secondary {
+    color: #666666; /* Contrast ratio: 5.74:1 on white */
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    * {
+        border-color: currentColor !important;
+    }
+    
+    button,
+    .btn-primary,
+    .action-btn {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .voice-btn.listening {
+        animation: none;
+    }
+    
+    .spinner {
+        animation: none;
+        border-top-color: var(--color-primary);
+    }
+}
+
+/* Screen Reader Announcements */
+[aria-live="polite"],
+[aria-live="assertive"] {
+    position: relative;
+}
+
+/* Voice Error Styling */
+.voice-error {
+    position: fixed;
+    top: var(--space-5);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-error);
+    color: var(--text-inverse);
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 90%;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateX(-50%) translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+.voice-error .error-icon {
+    font-size: var(--font-size-2xl);
+}
+
+.voice-error .error-message {
+    flex: 1;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+.voice-error .error-close {
+    background: transparent;
+    border: none;
+    color: var(--text-inverse);
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    padding: var(--space-1);
+    min-width: 32px;
+    min-height: 32px;
+}
+
+/* ARIA Labels Enhancement */
+[aria-label] {
+    position: relative;
+}
+
+/* Tooltip for ARIA Labels (on focus) */
+[aria-label]:focus::after {
+    content: attr(aria-label);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-dark);
+    color: var(--text-inverse);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+    z-index: 1000;
+    margin-bottom: var(--space-2);
+}
+
+/* Loading State Accessibility */
+.loading[aria-busy="true"] {
+    cursor: wait;
+}
+
+/* Form Input Accessibility */
+input[aria-invalid="true"] {
+    border-color: var(--color-error);
+    border-width: 3px;
+}
+
+input[aria-invalid="true"]:focus {
+    outline-color: var(--color-error);
+}
+
+/* Status Messages */
+.status-message {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    margin: var(--space-4) 0;
+    font-weight: var(--font-weight-medium);
+}
+
+.status-message.success {
+    background: var(--color-success);
+    color: var(--text-inverse);
+}
+
+.status-message.error {
+    background: var(--color-error);
+    color: var(--text-inverse);
+}
+
+.status-message.info {
+    background: var(--color-info);
+    color: var(--text-inverse);
+}
+
+/* Low Digital Literacy Enhancements */
+.simple-mode {
+    font-size: var(--font-size-lg);
+    line-height: var(--line-height-relaxed);
+}
+
+.simple-mode button {
+    min-height: 56px;
+    font-size: var(--font-size-xl);
+}
+
+.simple-mode .icon {
+    font-size: 48px;
+}
+
+/* Visual Indicators for Interactive Elements */
+button:hover:not(:disabled),
+.action-btn:hover,
+.nav-btn:hover {
+    transform: scale(1.05);
+    transition: transform var(--transition-fast);
+}
+
+button:active:not(:disabled),
+.action-btn:active,
+.nav-btn:active {
+    transform: scale(0.95);
+}
+
+/* Disabled State Accessibility */
+button:disabled,
+input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+button:disabled:focus,
+input:disabled:focus {
+    outline: 2px dashed var(--text-tertiary);
+}
+
+/* Color Blind Friendly Patterns */
+.work-status.completed::before {
+    content: '✓ ';
+}
+
+.work-status.pending::before {
+    content: '⏳ ';
+}
+
+/* Print Styles for Accessibility */
+@media print {
+    .skip-link,
+    .voice-btn,
+    .bottom-nav,
+    .theme-selector {
+        display: none;
+    }
+    
+    body {
+        background: white;
+        color: black;
+    }
+}
+
+/* Android TalkBack Optimization */
+@media (prefers-reduced-motion: no-preference) {
+    [role="button"]:active,
+    button:active {
+        animation: tap-feedback 0.2s ease;
+    }
+}
+
+@keyframes tap-feedback {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* NVDA Screen Reader Optimization */
+[role="navigation"] {
+    position: relative;
+}
+
+[role="main"] {
+    position: relative;
+}
+
+/* Language Direction Support */
+[dir="rtl"] {
+    text-align: right;
+}
+
+[dir="rtl"] .skip-link {
+    left: auto;
+    right: 0;
+}
+
+/* Forced Colors Mode (Windows High Contrast) */
+@media (forced-colors: active) {
+    button,
+    .btn-primary,
+    .action-btn {
+        border: 2px solid;
+    }
+    
+    *:focus {
+        outline: 3px solid;
+    }
+}

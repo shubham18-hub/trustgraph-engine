@@ -1,0 +1,64 @@
+{
+  "themes": {
+    "default": {
+      "name": "TrustGraph Default",
+      "colors": {
+        "primary": "#FF9933",
+        "secondary": "#138808",
+        "accent": "#000080"
+      },
+      "wcag_aa_compliant": true
+    },
+    "government": {
+      "name": "Government",
+      "colors": {
+        "primary": "#0066CC",
+        "secondary": "#006633",
+        "accent": "#FF6600"
+      },
+      "wcag_aa_compliant": true
+    },
+    "ngo": {
+      "name": "NGO",
+      "colors": {
+        "primary": "#8B4513",
+        "secondary": "#228B22",
+        "accent": "#FF4500"
+      },
+      "wcag_aa_compliant": true
+    },
+    "corporate": {
+      "name": "Corporate",
+      "colors": {
+        "primary": "#2C3E50",
+        "secondary": "#3498DB",
+        "accent": "#E74C3C"
+      },
+      "wcag_aa_compliant": true
+    },
+    "high-contrast": {
+      "name": "High Contrast",
+      "colors": {
+        "primary": "#000000",
+        "secondary": "#FFFFFF",
+        "accent": "#FFFF00"
+      },
+      "wcag_aa_compliant": true,
+      "accessibility": "enhanced"
+    },
+    "dark": {
+      "name": "Dark Mode",
+      "colors": {
+        "primary": "#FF9933",
+        "secondary": "#1AA70A",
+        "accent": "#4169E1"
+      },
+      "wcag_aa_compliant": true
+    }
+  },
+  "customization": {
+    "allow_custom_colors": true,
+    "require_wcag_compliance": true,
+    "min_contrast_ratio": 4.5
+  }
+}

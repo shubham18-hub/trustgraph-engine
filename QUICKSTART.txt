@@ -1,0 +1,52 @@
+TrustGraph Engine - Quick Start Guide
+=====================================
+
+OPTION 1: Simple Start (No Docker)
+-----------------------------------
+1. Double-click: START.bat
+2. Open: http://localhost:8000
+
+OPTION 2: Docker Deployment
+----------------------------
+1. Install Docker Desktop
+2. Double-click: DEPLOY.bat
+3. Open: http://localhost:3000
+
+OPTION 3: AWS Deployment
+-------------------------
+1. Configure AWS credentials
+2. Run: deploy.ps1 production ap-south-1
+3. Access via CloudFront URL
+
+Features Working:
+-----------------
+✓ Authentication (Aadhaar + OTP)
+✓ Voice commands (Hindi + 9 languages)
+✓ Trust score calculation
+✓ Credential issuance
+✓ Payment tracking
+✓ SQLite database
+✓ Security middleware
+✓ API documentation
+
+API Endpoints:
+--------------
+GET  /api/health
+POST /api/auth/init
+POST /api/auth/verify
+POST /api/intent/classify
+POST /api/voice/command
+POST /api/trust/calculate
+
+Documentation:
+--------------
+- API.md - Complete API documentation
+- README.md - Project overview
+- Dockerfile - Container configuration
+- docker-compose.yml - Multi-service setup
+
+Support:
+--------
+Issues: GitHub Issues
+Docs: /docs endpoint
+Demo: RUN_DEMO.bat

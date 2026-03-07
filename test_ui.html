@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test UI - TrustGraph</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>TrustGraph UI Test</h1>
+    
+    <div class="section">
+        <h2>1. Check LocalStorage</h2>
+        <button onclick="checkStorage()">Check Storage</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <pre id="storageResult"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>2. Test Login</h2>
+        <input type="text" id="testPhone" placeholder="Phone (10 digits)" value="9876543210">
+        <button onclick="testLogin()">Send OTP</button>
+        <br><br>
+        <input type="text" id="testOtp" placeholder="OTP (6 digits)">
+        <button onclick="testVerifyOTP()">Verify OTP</button>
+        <pre id="loginResult"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>3. Navigation</h2>
+        <button onclick="goToAuth()">Go to Auth Page</button>
+        <button onclick="goToDashboard()">Go to Dashboard</button>
+        <button onclick="goToHome()">Go to Home</button>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        
+        function checkStorage() {
+            const token = localStorage.getItem('token');
+            const userProfile = localStorage.getItem('userProfile');
+            
+            const result = {
+                hasToken: !!token,
+                hasProfile: !!userProfile,
+                token: token ? token.substring(0, 50) + '...' : null,
+                userProfile: userProfile ? JSON.parse(userProfile) : null
+            };
+            
+            document.getElementById('storageResult').textContent = JSON.stringify(result, null, 2);
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userProfile');
+            document.getElementById('storageResult').textContent = 'Storage cleared!';
+        }
+        
+        async function testLogin() {
+            const phone = document.getElementById('testPhone').value;
+            const resultEl = document.getElementById('loginResult');
+            
+            try {
+                resultEl.textContent = 'Sending OTP...';
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone })
+                });
+                
+                const data = await response.json();
+                resultEl.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.otp_demo) {
+                    document.getElementById('testOtp').value = data.otp_demo;
+                }
+            } catch (error) {
+                resultEl.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        async function testVerifyOTP() {
+            const phone = document.getElementById('testPhone').value;
+            const otp = document.getElementById('testOtp').value;
+            const resultEl = document.getElementById('loginResult');
+            
+            try {
+                resultEl.textContent = 'Verifying OTP...';
+                
+                const response = await fetch(`${API_BASE}/auth/login/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone, otp: otp })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userProfile', JSON.stringify(data.user_profile));
+                    resultEl.innerHTML = '<span class="success">✓ Login successful!</span>\n' + JSON.stringify(data, null, 2);
+                } else {
+                    resultEl.innerHTML = '<span class="error">✗ Login failed</span>\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultEl.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        function goToAuth() {
+            window.location.href = '/auth.html';
+        }
+        
+        function goToDashboard() {
+            window.location.href = '/index.html';
+        }
+        
+        function goToHome() {
+            window.location.href = '/';
+        }
+        
+        // Auto-check storage on load
+        window.addEventListener('load', checkStorage);
+    </script>
+</body>
+</html>

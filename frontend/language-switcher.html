@@ -1,0 +1,163 @@
+<!-- Language Switcher Component -->
+<style>
+.lang-switcher {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.lang-btn {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 25px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s;
+}
+
+.lang-btn:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transform: translateY(-2px);
+}
+
+.lang-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 200px;
+    max-height: 400px;
+    overflow-y: auto;
+    display: none;
+}
+
+.lang-dropdown.active {
+    display: block;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.lang-option {
+    padding: 12px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.lang-option:last-child {
+    border-bottom: none;
+}
+
+.lang-option:hover {
+    background: #f5f5f5;
+}
+
+.lang-option.active {
+    background: #e3f2fd;
+    font-weight: bold;
+}
+
+.lang-flag {
+    font-size: 20px;
+}
+
+.lang-name {
+    flex: 1;
+}
+
+.lang-check {
+    color: #4CAF50;
+    font-size: 18px;
+}
+</style>
+
+<div class="lang-switcher">
+    <button class="lang-btn" onclick="toggleLangDropdown()">
+        <span class="lang-flag" id="currentLangFlag">🇮🇳</span>
+        <span class="lang-name" id="currentLangName">हिन्दी</span>
+        <span>▼</span>
+    </button>
+    
+    <div class="lang-dropdown" id="langDropdown">
+        <!-- Languages will be populated by JavaScript -->
+    </div>
+</div>
+
+<script>
+function toggleLangDropdown() {
+    const dropdown = document.getElementById('langDropdown');
+    dropdown.classList.toggle('active');
+}
+
+function populateLanguages() {
+    const dropdown = document.getElementById('langDropdown');
+    const languages = getAvailableLanguages();
+    const currentLang = getCurrentLanguage();
+    
+    dropdown.innerHTML = languages.map(lang => `
+        <div class="lang-option ${lang.code === currentLang ? 'active' : ''}" 
+             onclick="changeLang('${lang.code}')">
+            <span class="lang-flag">${lang.flag}</span>
+            <span class="lang-name">${lang.name}</span>
+            ${lang.code === currentLang ? '<span class="lang-check">✓</span>' : ''}
+        </div>
+    `).join('');
+}
+
+function changeLang(langCode) {
+    setLanguage(langCode);
+    updateCurrentLangDisplay();
+    populateLanguages();
+    toggleLangDropdown();
+    
+    // Show success message
+    showMessage(t('languageChanged') || 'भाषा बदल गई', 'success');
+}
+
+function updateCurrentLangDisplay() {
+    const currentLang = getCurrentLanguage();
+    const langData = translations[currentLang];
+    
+    document.getElementById('currentLangFlag').textContent = langData.flag;
+    document.getElementById('currentLangName').textContent = langData.name;
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    const switcher = document.querySelector('.lang-switcher');
+    const dropdown = document.getElementById('langDropdown');
+    
+    if (switcher && !switcher.contains(e.target)) {
+        dropdown.classList.remove('active');
+    }
+});
+
+// Initialize on load
+window.addEventListener('load', () => {
+    populateLanguages();
+    updateCurrentLangDisplay();
+});
+</script>

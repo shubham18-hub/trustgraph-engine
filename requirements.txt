@@ -1,66 +1,49 @@
-# TrustGraph Engine Dependencies
+# TrustGraph Engine Dependencies - Python 3.12 Compatible
+
+# Core Web Framework (Essential)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+python-multipart>=0.0.6
+
 # AWS SDK and Services
-boto3==1.34.34
-botocore==1.34.34
-aws-lambda-powertools==2.29.1
+boto3>=1.34.0
+botocore>=1.34.0
+aws-lambda-powertools>=2.29.0
 
-# FastAPI and Web Framework
-fastapi==0.109.0
-uvicorn==0.27.0
-pydantic==2.5.3
-
-# Voice Processing and AI
-openai-whisper==20231117
-pydub==0.25.1
-speechrecognition==3.10.1
-gtts==2.4.0
+# Voice Processing and AI (Simplified for demo)
+pydub>=0.25.1
+speechrecognition>=3.10.0
+gtts>=2.4.0
+requests>=2.31.0
 
 # Blockchain and Cryptography
-cryptography==42.0.2
-ecdsa==0.18.0
-web3==6.15.1
-hyperledger-fabric-sdk-py==1.0.0
+cryptography>=41.0.0
+ecdsa>=0.18.0
 
-# Graph Neural Networks and ML
-torch==2.1.2
-dgl==1.1.3
-scikit-learn==1.4.0
-numpy==1.26.3
-pandas==2.2.0
-
-# Database and Storage
-pymongo==4.6.1
-redis==5.0.1
-sqlalchemy==2.0.25
+# Machine Learning (Core only)
+scikit-learn>=1.3.0
+numpy>=1.24.0
+pandas>=2.0.0
 
 # Authentication and Security
-pyjwt==2.8.0
-passlib==1.7.4
-python-multipart==0.0.6
+pyjwt>=2.8.0
+passlib[bcrypt]>=1.7.4
 
 # Utilities and Helpers
-python-dotenv==1.0.0
-requests==2.31.0
-aiohttp==3.9.1
-asyncio==3.4.3
-pydantic-settings==2.1.0
+python-dotenv>=1.0.0
+aiohttp>=3.9.0
+pydantic-settings>=2.1.0
 
 # Testing and Development
-pytest==7.4.4
-pytest-asyncio==0.23.3
-pytest-cov==4.1.0
-black==23.12.1
-flake8==7.0.0
-mypy==1.8.0
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.0.0
 
 # Monitoring and Logging
-structlog==23.2.0
-prometheus-client==0.19.0
+structlog>=23.2.0
 
-# Indian Language Support
-indic-transliteration==2.3.44
-polyglot==16.7.4
-
-# UPI and Payment Integration
-razorpay==1.4.1
-paytm-checksum==1.7.0
+# Optional: Advanced ML (install separately if needed)
+# torch>=2.1.0  # Uncomment if you need PyTorch
+# transformers>=4.30.0  # Uncomment for advanced NLP

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustGraph Engine - Interactive Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #FF9933 0%, #FFFFFF 50%, #138808 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #FF9933 0%, #138808 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            overflow-x: auto;
+        }
+        
+        .nav-item {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #495057;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        
+        .nav-item:hover {
+            background: #e9ecef;
+        }
+        
+        .nav-item.active {
+            background: white;
+            color: #FF9933;
+            border-bottom: 3px solid #FF9933;
+        }
+        
+        .content {
+            padding: 2rem;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .demo-section {
+            background: #f8f9fa;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+        
+        .demo-section h2 {
+            color: #FF9933;
+            margin-bottom: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #FF9933;
+        }
+        
+        .btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 1rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #FF9933, #FF6600);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 153, 51, 0.4);
+        }
+        
+        .btn-success {
+            background: #138808;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #0f6906;
+        }
+        
+        .result-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-left: 4px solid #FF9933;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .result-box.show {
+            display: block;
+            animation: slideIn 0.3s;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        .score-display {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .score-circle {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF9933, #138808);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .score-circle-inner {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .score-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #FF9933;
+        }
+        
+        .score-label {
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        
+        .factors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .factor-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .factor-card h4 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .factor-score {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #138808;
+        }
+        
+        .credential-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            margin-bottom: 1rem;
+        }
+        
+        .credential-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .credential-badge {
+            background: #138808;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF9933;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇮🇳 TrustGraph Engine</h1>
+            <p>Digital ShramSetu - Interactive Demo</p>
+        </div>
+        
+        <div class="nav">
+            <button class="nav-item active" onclick="showTab('overview')">Overview</button>
+            <button class="nav-item" onclick="showTab('trust-score')">Trust Score</button>
+            <button class="nav-item" onclick="showTab('wallet')">Digital Wallet</button>
+            <button class="nav-item" onclick="showTab('contracts')">Smart Contracts</button>
+            <button class="nav-item" onclick="showTab('voice')">Voice Interface</button>
+            <button class="nav-item" onclick="showTab('auth')">Authentication</button>
+        </div>
+        
+        <div class="content">
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <div class="demo-section">
+                    <h2>Welcome to TrustGraph Engine</h2>
+                    <p style="margin-bottom: 1rem;">TrustGraph Engine is India's first blockchain-powered platform for informal workers, converting social proof into bankable digital assets.</p>
+                    
+                    <div class="factors-grid">
+                        <div class="factor-card">
+                            <h4>📊 Trust Score</h4>
+                            <p>GNN-based credit scoring</p>
+                        </div>
+                        <div class="factor-card">
+                            <h4>💼 Digital Wallet</h4>
+                            <p>W3C Verifiable Credentials</p>
+                        </div>
+                        <div class="factor-card">
+                            <h4>📝 Smart Contracts</h4>
+                            <p>Milestone-based payments</p>
+                        </div>
+                        <div class="factor-card">
+                            <h4>🎤 Voice Interface</h4>
+                            <p>22 Indian languages</p>
+                        </div>
+                        <div class="factor-card">
+                            <h4>🔐 Authentication</h4>
+                            <p>Aadhaar + Voice biometric</p>
+                        </div>
+                        <div class="factor-card">
+                            <h4>💰 UPI Payments</h4>
+                            <p>Instant disbursement</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trust Score Tab -->
+            <div id="trust-score" class="tab-content">
+                <div class="demo-section">
+                    <h2>Resilience Score Calculator</h2>
+                    <p style="margin-bottom: 1.5rem;">Calculate trust score using Graph Neural Networks</p>
+                    
+                    <div class="form-group">
+                        <label>Worker ID</label>
+                        <input type="text" id="worker-id" value="user_123" placeholder="Enter worker ID">
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="calculateTrustScore()">Calculate Trust Score</button>
+                    
+                    <div id="trust-score-result" class="result-box">
+                        <div id="trust-score-loading" class="loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Analyzing trust factors...</p>
+                        </div>
+                        <div id="trust-score-display" style="display: none;">
+                            <div class="score-display">
+                                <div class="score-circle">
+                                    <div class="score-circle-inner">
+                                        <div class="score-number" id="score-value">720</div>
+                                        <div class="score-label">Resilience Score</div>
+                                    </div>
+                                </div>
+                                <h3 id="score-category" style="color: #138808;">Good Credit</h3>
+                            </div>
+                            
+                            <div class="factors-grid" id="factors-display"></div>
+                            
+                            <div style="margin-top: 2rem; padding: 1rem; background: #e7f5e7; border-radius: 8px;">
+                                <h4 style="color: #138808; margin-bottom: 0.5rem;">Credit Eligibility</h4>
+                                <p><strong>Max Loan:</strong> ₹<span id="max-loan">50,000</span></p>
+                                <p><strong>Interest Rate:</strong> <span id="interest-rate">15.0</span>%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Digital Wallet Tab -->
+            <div id="wallet" class="tab-content">
+                <div class="demo-section">
+                    <h2>Digital Wallet</h2>
+                    <p style="margin-bottom: 1.5rem;">Self-sovereign identity with W3C Verifiable Credentials</p>
+                    
+                    <div class="form-group">
+                        <label>Worker ID</label>
+                        <input type="text" id="wallet-worker-id" value="user_123" placeholder="Enter worker ID">
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="loadWallet()">Load Wallet</button>
+                    <button class="btn btn-success" onclick="createCredential()">Create New Credential</button>
+                    
+                    <div id="wallet-result" class="result-box">
+                        <div id="wallet-loading" class="loading" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Loading wallet...</p>
+                        </div>
+                        <div id="wallet-display" style="display: none;">
+                            <div style="background: linear-gradient(135deg, #FF9933, #138808); color: white; padding: 2rem; border-radius: 10px; margin-bottom: 1rem;">
+                                <h3 style="margin-bottom: 1rem;">Wallet Overview</h3>
+                                <p><strong>DID:</strong> <span id="wallet-did"></span></p>
+                                <p><strong>Trust Score:</strong> <span id="wallet-score"></span></p>
+                                <p><strong>Total Earnings:</strong> ₹<span id="wallet-earnings"></span></p>
+                            </div>
+                            
+                            <h3 style="margin: 1.5rem 0 1rem;">Verifiable Credentials</h3>
+                            <div id="credentials-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Smart Contracts Tab -->
+            <div id="contracts" class="tab-content">
+                <div class="demo-section">
+                    <h2>Agentic Smart Contracts</h2>
+                    <p style="margin-bottom: 1.5rem;">Create milestone-based contracts with auto-payment</p>
+                    
+                    <div class="form-group">
+                        <label>Job Title</label>
+                        <input type="text" id="job-title" value="House Construction" placeholder="Enter job title">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Total Amount (₹)</label>
+                        <input type="number" id="job-amount" value="50000" placeholder="Enter amount">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Number of Milestones</label>
+                        <input type="number" id="milestones-count" value="3" min="1" max="10">
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="createContract()">Create Contract</button>
+                    <button class="btn btn-success" onclick="submitProof()">Submit Milestone Proof</button>
+                    
+                    <div id="contract-result" class="result-box">
+                        <div id="contract-display"></div>
+                    </div>
+                </div>
+            </div>

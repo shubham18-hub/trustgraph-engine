@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustGraph - Language Demo</title>
+    <script src="i18n.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #FF9933;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        
+        .demo-section h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .text-demo {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .text-item {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .text-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .text-value {
+            font-size: 18px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .lang-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .lang-btn {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 25px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .lang-btn:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+        
+        .lang-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 10px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .lang-dropdown.active {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .lang-option {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .lang-option:last-child {
+            border-bottom: none;
+        }
+        
+        .lang-option:hover {
+            background: #f5f5f5;
+        }
+        
+        .lang-option.active {
+            background: #e3f2fd;
+            font-weight: bold;
+        }
+        
+        .lang-flag {
+            font-size: 20px;
+        }
+        
+        .lang-name {
+            flex: 1;
+        }
+        
+        .lang-check {
+            color: #4CAF50;
+            font-size: 18px;
+        }
+        
+        .message {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            padding: 15px 20px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Language Switcher -->
+    <div class="lang-switcher">
+        <button class="lang-btn" onclick="toggleLangDropdown()">
+            <span class="lang-flag" id="currentLangFlag">🇮🇳</span>
+            <span class="lang-name" id="currentLangName">हिन्दी</span>
+            <span>▼</span>
+        </button>
+        
+        <div class="lang-dropdown" id="langDropdown">
+            <!-- Languages will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <div class="container">
+        <h1>🇮🇳 TrustGraph</h1>
+        <p class="subtitle" data-i18n="digitalShramSetu">डिजिटल श्रमसेतु</p>
+        
+        <div class="demo-section">
+            <h2>Authentication Texts</h2>
+            <div class="text-demo">
+                <div class="text-item">
+                    <div class="text-label">Login Button</div>
+                    <div class="text-value" data-i18n="login">लॉगिन करें</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">Signup Button</div>
+                    <div class="text-value" data-i18n="signup">साइन अप करें</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">Send OTP</div>
+                    <div class="text-value" data-i18n="sendOTP">OTP भेजें</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">Verify</div>
+                    <div class="text-value" data-i18n="verify">सत्यापित करें</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Dashboard Texts</h2>
+            <div class="text-demo">
+                <div class="text-item">
+                    <div class="text-label">Home</div>
+                    <div class="text-value" data-i18n="home">होम</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">Work</div>
+                    <div class="text-value" data-i18n="work">काम</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">Wallet</div>
+                    <div class="text-value" data-i18n="wallet">वॉलेट</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">Your Trust Score</div>
+                    <div class="text-value" data-i18n="yourTrustScore">आपका ट्रस्ट स्कोर</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Messages</h2>
+            <div class="text-demo">
+                <div class="text-item">
+                    <div class="text-label">Login Successful</div>
+                    <div class="text-value" data-i18n="loginSuccessful">लॉगिन सफल!</div>
+                </div>
+                <div class="text-item">
+                    <div class="text-label">OTP Sent</div>
+                    <div class="text-value" data-i18n="otpSentToPhone">OTP आपके मोबाइल पर भेजा गया है</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleLangDropdown() {
+            const dropdown = document.getElementById('langDropdown');
+            dropdown.classList.toggle('active');
+        }
+        
+        function populateLanguages() {
+            const dropdown = document.getElementById('langDropdown');
+            const languages = getAvailableLanguages();
+            const currentLang = getCurrentLanguage();
+            
+            dropdown.innerHTML = languages.map(lang => `
+                <div class="lang-option ${lang.code === currentLang ? 'active' : ''}" 
+                     onclick="changeLang('${lang.code}')">
+                    <span class="lang-flag">${lang.flag}</span>
+                    <span class="lang-name">${lang.name}</span>
+                    ${lang.code === currentLang ? '<span class="lang-check">✓</span>' : ''}
+                </div>
+            `).join('');
+        }
+        
+        function changeLang(langCode) {
+            setLanguage(langCode);
+            updateCurrentLangDisplay();
+            populateLanguages();
+            toggleLangDropdown();
+            
+            // Show success message
+            showMessage('Language changed to ' + translations[langCode].name);
+        }
+        
+        function updateCurrentLangDisplay() {
+            const currentLang = getCurrentLanguage();
+            const langData = translations[currentLang];
+            
+            document.getElementById('currentLangFlag').textContent = langData.flag;
+            document.getElementById('currentLangName').textContent = langData.name;
+        }
+        
+        function showMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'message';
+            msg.textContent = text;
+            document.body.appendChild(msg);
+            
+            setTimeout(() => {
+                msg.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => msg.remove(), 300);
+            }, 2000);
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const switcher = document.querySelector('.lang-switcher');
+            const dropdown = document.getElementById('langDropdown');
+            
+            if (switcher && !switcher.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            populateLanguages();
+            updateCurrentLangDisplay();
+        });
+    </script>
+</body>
+</html>

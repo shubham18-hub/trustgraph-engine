@@ -1,0 +1,56 @@
+{
+  "extends": "lighthouse:default",
+  "settings": {
+    "onlyCategories": ["performance", "accessibility", "best-practices", "seo"],
+    "throttling": {
+      "rttMs": 150,
+      "throughputKbps": 1638.4,
+      "requestLatencyMs": 562.5,
+      "downloadThroughputKbps": 1638.4,
+      "uploadThroughputKbps": 675,
+      "cpuSlowdownMultiplier": 4
+    },
+    "emulatedFormFactor": "mobile",
+    "locale": "hi-IN"
+  },
+  "audits": [
+    "first-contentful-paint",
+    "largest-contentful-paint",
+    "speed-index",
+    "total-blocking-time",
+    "cumulative-layout-shift",
+    "interactive"
+  ],
+  "categories": {
+    "performance": {
+      "title": "Performance",
+      "auditRefs": [
+        {"id": "first-contentful-paint", "weight": 10},
+        {"id": "largest-contentful-paint", "weight": 25},
+        {"id": "speed-index", "weight": 10},
+        {"id": "total-blocking-time", "weight": 30},
+        {"id": "cumulative-layout-shift", "weight": 25}
+      ]
+    }
+  },
+  "budgets": [
+    {
+      "resourceSizes": [
+        {"resourceType": "script", "budget": 150},
+        {"resourceType": "stylesheet", "budget": 50},
+        {"resourceType": "image", "budget": 200},
+        {"resourceType": "total", "budget": 500}
+      ],
+      "resourceCounts": [
+        {"resourceType": "script", "budget": 5},
+        {"resourceType": "stylesheet", "budget": 3},
+        {"resourceType": "third-party", "budget": 0}
+      ],
+      "timings": [
+        {"metric": "first-contentful-paint", "budget": 2000},
+        {"metric": "interactive", "budget": 3000},
+        {"metric": "largest-contentful-paint", "budget": 2500}
+      ]
+    }
+  ]
+}

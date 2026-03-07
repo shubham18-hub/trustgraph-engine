@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'TrustGraph Engine - Multi-Region Failover Configuration'
+
+Parameters:
+  PrimaryRegion:
+    Type: String
+    Default: ap-south-1
+    Description: Primary region (Mumbai)
+  
+  SecondaryRegion:
+    Type: String
+    Default: ap-southeast-1
+    Description: Secondary region (Singapore)
+  
+  Environment:
+    Type: String
+    Default: production
+
+Resources:
+  # Route 53 Health Check for Primary Region
+  PrimaryHealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS
+        ResourcePath: /health
+        FullyQualifiedDomainName: !Sub 'api-${PrimaryRegion}.trustgraph.gov.in'
+        Port: 443
+        RequestInterval: 30
+        FailureThreshold: 3
+      HealthCheckTags:
+        - Key: Name
+          Value: !Sub 'trustgraph-primary-${Environment}'
+
+  # Route 53 Health Check for Secondary Region
+  SecondaryHealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS
+        ResourcePath: /health
+        FullyQualifiedDomainName: !Sub 'api-${SecondaryRegion}.trustgraph.gov.in'
+        Port: 443
+        RequestInterval: 30
+        FailureThreshold: 3
+      HealthCheckTags:
+        - Key: Name
+          Value: !Sub 'trustgraph-secondary-${Environment}'
+
+  # DynamoDB Global Table
+  GlobalUsersTable:
+    Type: AWS::DynamoDB::GlobalTable
+    Properties:
+      TableName: !Sub 'trustgraph-users-global-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      Replicas:
+        - Region: !Ref PrimaryRegion
+          PointInTimeRecoverySpecification:
+            PointInTimeRecoveryEnabled: true
+          TableClass: STANDARD
+        - Region: !Ref SecondaryRegion
+          PointInTimeRecoverySpecification:
+            PointInTimeRecoveryEnabled: true
+          TableClass: STANDARD
+      SSESpecification:
+        SSEEnabled: true
+        SSEType: KMS
+
+  # S3 Cross-Region Replication
+  ReplicationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: S3ReplicationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetReplicationConfiguration'
+                  - 's3:ListBucket'
+                Resource: !Sub 'arn:aws:s3:::trustgraph-frontend-${Environment}'
+              - Effect: Allow
+                Action:
+                  - 's3:GetObjectVersionForReplication'
+                  - 's3:GetObjectVersionAcl'
+                Resource: !Sub 'arn:aws:s3:::trustgraph-frontend-${Environment}/*'
+              - Effect: Allow
+                Action:
+                  - 's3:ReplicateObject'
+                  - 's3:ReplicateDelete'
+                Resource: !Sub 'arn:aws:s3:::trustgraph-frontend-${Environment}-replica/*'
+
+  # CloudWatch Alarm for Failover
+  FailoverAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'trustgraph-failover-${Environment}'
+      AlarmDescription: Trigger failover when primary region is unhealthy
+      MetricName: HealthCheckStatus
+      Namespace: AWS/Route53
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: HealthCheckId
+          Value: !Ref PrimaryHealthCheck
+
+  # SNS Topic for Failover Notifications
+  FailoverTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'trustgraph-failover-${Environment}'
+      DisplayName: TrustGraph Failover Notifications
+      Subscription:
+        - Endpoint: ops@trustgraph.gov.in
+          Protocol: email
+
+  FailoverAlarmAction:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'trustgraph-failover-action-${Environment}'
+      AlarmActions:
+        - !Ref FailoverTopic
+      MetricName: HealthCheckStatus
+      Namespace: AWS/Route53
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+
+  # Backup Vault for Disaster Recovery
+  BackupVault:
+    Type: AWS::Backup::BackupVault
+    Properties:
+      BackupVaultName: !Sub 'trustgraph-vault-${Environment}'
+      EncryptionKeyArn: !GetAtt BackupKey.Arn
+
+  BackupKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: KMS key for TrustGraph backups
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+
+  BackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Sub 'trustgraph-backup-${Environment}'
+        BackupPlanRule:
+          - RuleName: DailyBackup
+            TargetBackupVault: !Ref BackupVault
+            ScheduleExpression: 'cron(0 2 * * ? *)'
+            StartWindowMinutes: 60
+            CompletionWindowMinutes: 120
+            Lifecycle:
+              DeleteAfterDays: 30
+              MoveToColdStorageAfterDays: 7
+            CopyActions:
+              - DestinationBackupVaultArn: !Sub 'arn:aws:backup:${SecondaryRegion}:${AWS::AccountId}:backup-vault:trustgraph-vault-${Environment}'
+                Lifecycle:
+                  DeleteAfterDays: 30
+
+Outputs:
+  PrimaryHealthCheckId:
+    Value: !Ref PrimaryHealthCheck
+    Description: Primary region health check ID
+  
+  SecondaryHealthCheckId:
+    Value: !Ref SecondaryHealthCheck
+    Description: Secondary region health check ID
+  
+  GlobalTableName:
+    Value: !Ref GlobalUsersTable
+    Description: Global DynamoDB table name
+  
+  BackupVaultArn:
+    Value: !GetAtt BackupVault.BackupVaultArn
+    Description: Backup vault ARN

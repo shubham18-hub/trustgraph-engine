@@ -1,0 +1,170 @@
+# Prometheus alerting rules for TrustGraph Engine
+
+groups:
+  - name: trustgraph_alerts
+    interval: 30s
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.instance }}"
+
+      # API latency
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API latency"
+          description: "95th percentile latency is {{ $value }}s for {{ $labels.instance }}"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up{job="trustgraph-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: backend
+        annotations:
+          summary: "TrustGraph backend is down"
+          description: "Backend service {{ $labels.instance }} has been down for more than 2 minutes"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
+
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Disk space low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "Low disk space"
+          description: "Only {{ $value | humanizePercentage }} disk space available on {{ $labels.instance }}"
+
+      # Database connection errors
+      - alert: DatabaseConnectionErrors
+        expr: rate(database_connection_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection errors"
+          description: "Database connection error rate is {{ $value }} on {{ $labels.instance }}"
+
+      # Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis instance {{ $labels.instance }} has been down for more than 2 minutes"
+
+      # High request rate
+      - alert: HighRequestRate
+        expr: rate(http_requests_total[5m]) > 1000
+        for: 5m
+        labels:
+          severity: info
+          component: api
+        annotations:
+          summary: "High request rate"
+          description: "Request rate is {{ $value }} req/s on {{ $labels.instance }}"
+
+      # Authentication failures
+      - alert: HighAuthFailureRate
+        expr: rate(auth_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: auth
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Auth failure rate is {{ $value }} failures/s on {{ $labels.instance }}"
+
+      # Blockchain sync lag
+      - alert: BlockchainSyncLag
+        expr: blockchain_sync_lag_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+          component: blockchain
+        annotations:
+          summary: "Blockchain sync lagging"
+          description: "Blockchain sync is {{ $value }}s behind on {{ $labels.instance }}"
+
+      # Voice service errors
+      - alert: VoiceServiceErrors
+        expr: rate(voice_service_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: voice
+        annotations:
+          summary: "Voice service errors"
+          description: "Voice service error rate is {{ $value }} on {{ $labels.instance }}"
+
+      # Trust score calculation failures
+      - alert: TrustScoreCalculationFailures
+        expr: rate(trust_score_calculation_failures_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: trust-score
+        annotations:
+          summary: "Trust score calculation failures"
+          description: "Trust score calculation failure rate is {{ $value }} on {{ $labels.instance }}"
+
+      # Credential issuance failures
+      - alert: CredentialIssuanceFailures
+        expr: rate(credential_issuance_failures_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          component: credentials
+        annotations:
+          summary: "Credential issuance failures"
+          description: "Credential issuance failure rate is {{ $value }} on {{ $labels.instance }}"
+
+      # Pod restart rate
+      - alert: HighPodRestartRate
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: kubernetes
+        annotations:
+          summary: "High pod restart rate"
+          description: "Pod {{ $labels.pod }} is restarting frequently"

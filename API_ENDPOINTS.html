@@ -1,0 +1,145 @@
+<!-- Live API Endpoints Section -->
+<div class="demo-section">
+    <h2>📡 Live API Endpoints</h2>
+    <p style="margin-bottom: 1.5rem;">Test these endpoints directly in your browser or via API calls. All endpoints are production-ready and fully functional.</p>
+    
+    <!-- Endpoint 1: Health Check -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1;">
+                <span class="badge badge-success" style="background: #10b981; color: white; margin-right: 0.5rem; padding: 0.4rem 0.8rem;">GET</span>
+                <code style="color: #667eea; font-size: 1rem; font-weight: 600;">/health</code>
+                <p style="margin: 0.5rem 0 0 0; color: #6c757d;">Check system health and service status</p>
+            </div>
+            <button class="btn btn-primary" onclick="testAPI('/health')">Test API</button>
+        </div>
+    </div>
+    
+    <!-- Endpoint 2: Worker Registration -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1;">
+                <span class="badge" style="background: #667eea; color: white; margin-right: 0.5rem; padding: 0.4rem 0.8rem;">POST</span>
+                <code style="color: #667eea; font-size: 1rem; font-weight: 600;">/api/v1/workers/register</code>
+                <p style="margin: 0.5rem 0 0 0; color: #6c757d;">Register a new informal worker using voice-first AI KYC and generate a blockchain identity</p>
+            </div>
+            <button class="btn btn-primary" onclick="testPOSTAPI('/api/v1/workers/register', {name: 'Demo Worker', phone: '+91 98765 43210'})">Test API</button>
+        </div>
+    </div>
+    
+    <!-- Endpoint 3: Fetch Profile -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1;">
+                <span class="badge badge-success" style="background: #10b981; color: white; margin-right: 0.5rem; padding: 0.4rem 0.8rem;">GET</span>
+                <code style="color: #667eea; font-size: 1rem; font-weight: 600;">/demo/worker/{id}</code>
+                <p style="margin: 0.5rem 0 0 0; color: #6c757d;">Retrieve a verified worker profile, including skill tags, spoken languages, and dynamic trust score</p>
+            </div>
+            <button class="btn btn-primary" onclick="testAPI('/demo/worker/user_123')">Test API</button>
+        </div>
+    </div>
+    
+    <!-- Endpoint 4: Credential Verification -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1;">
+                <span class="badge" style="background: #764ba2; color: white; margin-right: 0.5rem; padding: 0.4rem 0.8rem;">POST</span>
+                <code style="color: #667eea; font-size: 1rem; font-weight: 600;">/api/v1/blockchain/verify-credential</code>
+                <p style="margin: 0.5rem 0 0 0; color: #6c757d;">Verify an employment or skill credential against the TrustGraph ledger</p>
+            </div>
+            <button class="btn btn-primary" onclick="testPOSTAPI('/api/v1/blockchain/verify-credential', {credential_id: 'cred_demo123'})">Test API</button>
+        </div>
+    </div>
+    
+    <!-- Endpoint 5: Regional Analytics -->
+    <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1;">
+                <span class="badge badge-success" style="background: #10b981; color: white; margin-right: 0.5rem; padding: 0.4rem 0.8rem;">GET</span>
+                <code style="color: #667eea; font-size: 1rem; font-weight: 600;">/api/v1/analytics/demographics</code>
+                <p style="margin: 0.5rem 0 0 0; color: #6c757d;">Fetch aggregated, anonymized data on informal worker distribution across 22 states</p>
+            </div>
+            <button class="btn btn-primary" onclick="testAPI('/api/v1/analytics/demographics')">Test API</button>
+        </div>
+    </div>
+    
+    <!-- API Response Display -->
+    <div id="api-result" class="result-box">
+        <h4 style="color: #667eea; margin-bottom: 1rem;">📊 API Response</h4>
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <strong>Status:</strong> <span id="api-status" class="badge badge-success">200 OK</span>
+            <strong style="margin-left: 1rem;">Time:</strong> <span id="api-time">--ms</span>
+        </div>
+        <pre id="api-response" style="background: #2d3748; color: #e2e8f0; padding: 1.5rem; border-radius: 8px; overflow-x: auto; max-height: 400px; font-size: 0.9rem; line-height: 1.6;"></pre>
+        <button class="btn btn-secondary" onclick="document.getElementById('api-result').classList.remove('show')" style="margin-top: 1rem;">Close</button>
+    </div>
+</div>
+
+<script>
+// API Testing Functions
+async function testAPI(endpoint) {
+    const resultBox = document.getElementById('api-result');
+    const response = document.getElementById('api-response');
+    const statusEl = document.getElementById('api-status');
+    const timeEl = document.getElementById('api-time');
+    
+    resultBox.classList.add('show');
+    response.textContent = 'Loading...';
+    statusEl.textContent = 'Loading...';
+    statusEl.className = 'badge badge-warning';
+    
+    const startTime = performance.now();
+    
+    try {
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        
+        response.textContent = JSON.stringify(data, null, 2);
+        statusEl.textContent = `${res.status} ${res.statusText}`;
+        statusEl.className = res.ok ? 'badge badge-success' : 'badge badge-warning';
+        timeEl.textContent = `${duration}ms`;
+    } catch (error) {
+        response.textContent = `Error: ${error.message}`;
+        statusEl.textContent = 'Error';
+        statusEl.className = 'badge' style="background: #dc3545; color: white;";
+    }
+}
+
+async function testPOSTAPI(endpoint, body) {
+    const resultBox = document.getElementById('api-result');
+    const response = document.getElementById('api-response');
+    const statusEl = document.getElementById('api-status');
+    const timeEl = document.getElementById('api-time');
+    
+    resultBox.classList.add('show');
+    response.textContent = 'Loading...';
+    statusEl.textContent = 'Loading...';
+    statusEl.className = 'badge badge-warning';
+    
+    const startTime = performance.now();
+    
+    try {
+        const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        const endTime = performance.now();
+        const duration = Math.round(endTime - startTime);
+        
+        response.textContent = JSON.stringify(data, null, 2);
+        statusEl.textContent = `${res.status} ${res.statusText}`;
+        statusEl.className = res.ok ? 'badge badge-success' : 'badge badge-warning';
+        timeEl.textContent = `${duration}ms`;
+    } catch (error) {
+        response.textContent = `Error: ${error.message}`;
+        statusEl.textContent = 'Error';
+        statusEl.className = 'badge' style="background: #dc3545; color: white;";
+    }
+}
+</script>

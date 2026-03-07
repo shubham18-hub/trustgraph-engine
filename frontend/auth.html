@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#FF9933">
+    <title>TrustGraph - लॉगिन/साइन अप</title>
+    <link rel="stylesheet" href="themes.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="i18n.js"></script>
+    <style>
+        /* Language Switcher */
+        .lang-switcher {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .lang-btn {
+            background: white;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        
+        .lang-btn:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .lang-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 10px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .lang-dropdown.active {
+            display: block;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .lang-option {
+            padding: 12px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .lang-option:last-child {
+            border-bottom: none;
+        }
+        
+        .lang-option:hover {
+            background: #f5f5f5;
+        }
+        
+        .lang-option.active {
+            background: #e3f2fd;
+            font-weight: bold;
+        }
+        
+        .lang-flag {
+            font-size: 20px;
+        }
+        
+        .lang-name {
+            flex: 1;
+        }
+        
+        .lang-check {
+            color: #4CAF50;
+            font-size: 18px;
+        }
+        
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .auth-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .auth-logo h1 {
+            color: #FF9933;
+            font-size: 2.5em;
+            margin: 0;
+        }
+        
+        .auth-logo p {
+            color: #138808;
+            font-size: 1.2em;
+            margin: 5px 0 0 0;
+        }
+        
+        .auth-form h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .auth-form .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: opacity 0.3s;
+        }
+        
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            width: 100%;
+            padding: 15px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        
+        .btn-secondary:hover {
+            background: #f5f5f5;
+        }
+        
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #999;
+            position: relative;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #ddd;
+        }
+        
+        .divider::before {
+            left: 0;
+        }
+        
+        .divider::after {
+            right: 0;
+        }
+        
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .message-success {
+            background: #4CAF50;
+        }
+        
+        .message-error {
+            background: #f44336;
+        }
+        
+        .message-info {
+            background: #2196F3;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        .required {
+            color: #f44336;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Language Switcher -->
+    <div class="lang-switcher">
+        <button class="lang-btn" onclick="toggleLangDropdown()">
+            <span class="lang-flag" id="currentLangFlag">🇮🇳</span>
+            <span class="lang-name" id="currentLangName">हिन्दी</span>
+            <span>▼</span>
+        </button>
+        
+        <div class="lang-dropdown" id="langDropdown"></div>
+    </div>
+    
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <h1>🇮🇳 TrustGraph</h1>
+                <p>Digital ShramSetu</p>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2>लॉगिन करें</h2>
+                <p class="subtitle">अपने मोबाइल नंबर से लॉगिन करें</p>
+                
+                <input 
+                    type="tel" 
+                    id="loginPhone" 
+                    placeholder="मोबाइल नंबर (10 अंक)" 
+                    maxlength="10"
+                    pattern="[0-9]{10}"
+                    class="input-field"
+                />
+                
+                <button onclick="initiateLogin()" class="btn-primary">OTP भेजें</button>
+                
+                <div class="divider">या</div>
+                
+                <button onclick="showSignupForm()" class="btn-secondary">नया खाता बनाएं</button>
+            </div>
+            
+            <!-- Login OTP Verification -->
+            <div id="loginOtpForm" class="auth-form hidden">
+                <h2>OTP सत्यापन</h2>
+                <p class="subtitle">OTP भेजा गया: <span id="loginPhoneDisplay"></span></p>
+                
+                <input 
+                    type="text" 
+                    id="loginOtp" 
+                    placeholder="OTP दर्ज करें (6 अंक)" 
+                    maxlength="6"
+                    pattern="[0-9]{6}"
+                    class="input-field"
+                />
+                
+                <button onclick="verifyLoginOTP()" class="btn-primary">सत्यापित करें</button>
+                <button onclick="showLoginForm()" class="btn-secondary">रद्द करें</button>
+            </div>
+            
+            <!-- Signup Form -->
+            <div id="signupForm" class="auth-form hidden">
+                <h2>नया खाता बनाएं</h2>
+                <p class="subtitle">अपनी जानकारी दर्ज करें</p>
+                
+                <input 
+                    type="text" 
+                    id="signupName" 
+                    placeholder="पूरा नाम *" 
+                    class="input-field"
+                    required
+                />
+                
+                <input 
+                    type="tel" 
+                    id="signupPhone" 
+                    placeholder="मोबाइल नंबर (10 अंक) *" 
+                    maxlength="10"
+                    pattern="[0-9]{10}"
+                    class="input-field"
+                    required
+                />
+                
+                <input 
+                    type="text" 
+                    id="signupAadhaar" 
+                    placeholder="आधार नंबर (12 अंक) *" 
+                    maxlength="12"
+                    pattern="[0-9]{12}"
+                    class="input-field"
+                    required
+                />
+                
+                <input 
+                    type="email" 
+                    id="signupEmail" 
+                    placeholder="ईमेल (वैकल्पिक)" 
+                    class="input-field"
+                />
+                
+                <input 
+                    type="text" 
+                    id="signupCity" 
+                    placeholder="शहर (वैकल्पिक)" 
+                    class="input-field"
+                />
+                
+                <input 
+                    type="text" 
+                    id="signupState" 
+                    placeholder="राज्य (वैकल्पिक)" 
+                    class="input-field"
+                />
+                
+                <input 
+                    type="text" 
+                    id="signupPincode" 
+                    placeholder="पिनकोड (6 अंक, वैकल्पिक)" 
+                    maxlength="6"
+                    pattern="[0-9]{6}"
+                    class="input-field"
+                />
+                
+                <button onclick="initiateSignup()" class="btn-primary">साइन अप करें</button>
+                
+                <div class="divider">या</div>
+                
+                <button onclick="showLoginForm()" class="btn-secondary">पहले से खाता है? लॉगिन करें</button>
+            </div>
+            
+            <!-- Signup OTP Verification -->
+            <div id="signupOtpForm" class="auth-form hidden">
+                <h2>OTP सत्यापन</h2>
+                <p class="subtitle">OTP भेजा गया: <span id="signupPhoneDisplay"></span></p>
+                
+                <input 
+                    type="text" 
+                    id="signupOtp" 
+                    placeholder="OTP दर्ज करें (6 अंक)" 
+                    maxlength="6"
+                    pattern="[0-9]{6}"
+                    class="input-field"
+                />
+                
+                <button onclick="verifySignupOTP()" class="btn-primary">सत्यापित करें और खाता बनाएं</button>
+                <button onclick="showSignupForm()" class="btn-secondary">रद्द करें</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let signupData = null;
+        
+        // Form Navigation
+        function showLoginForm() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('loginOtpForm').classList.add('hidden');
+            document.getElementById('signupForm').classList.add('hidden');
+            document.getElementById('signupOtpForm').classList.add('hidden');
+        }
+        
+        function showSignupForm() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('loginOtpForm').classList.add('hidden');
+            document.getElementById('signupForm').classList.remove('hidden');
+            document.getElementById('signupOtpForm').classList.add('hidden');
+        }
+        
+        // Message Display
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.textContent = message;
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => messageDiv.remove(), 300);
+            }, 3000);
+        }
+        
+        // Login Flow
+        async function initiateLogin() {
+            const phone = document.getElementById('loginPhone').value;
+            
+            if (!phone || phone.length !== 10) {
+                showMessage('कृपया सही मोबाइल नंबर दर्ज करें (10 अंक)', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('OTP भेजा जा रहा है...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    document.getElementById('loginForm').classList.add('hidden');
+                    document.getElementById('loginOtpForm').classList.remove('hidden');
+                    document.getElementById('loginPhoneDisplay').textContent = data.phone;
+                    
+                    if (data.otp_demo) {
+                        showMessage(`OTP: ${data.otp_demo}`, 'success');
+                    } else {
+                        showMessage('OTP आपके मोबाइल पर भेजा गया है', 'success');
+                    }
+                } else {
+                    if (data.detail && data.detail.includes('not registered')) {
+                        showMessage('फोन नंबर पंजीकृत नहीं है। कृपया साइन अप करें।', 'error');
+                        setTimeout(showSignupForm, 2000);
+                    } else {
+                        showMessage(data.error || data.detail || 'Login failed', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('कनेक्शन में समस्या है', 'error');
+            }
+        }
+        
+        async function verifyLoginOTP() {
+            const phone = document.getElementById('loginPhone').value;
+            const otp = document.getElementById('loginOtp').value;
+            
+            if (!otp || otp.length !== 6) {
+                showMessage('कृपया 6 अंकों का OTP दर्ज करें', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('OTP सत्यापित किया जा रहा है...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/login/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: phone, otp: otp })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userProfile', JSON.stringify(data.user_profile));
+                    
+                    showMessage('लॉगिन सफल!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    showMessage(data.error || data.detail || 'OTP सत्यापन विफल', 'error');
+                }
+            } catch (error) {
+                console.error('OTP verification error:', error);
+                showMessage('कनेक्शन में समस्या है', 'error');
+            }
+        }
+        
+        // Signup Flow
+        async function initiateSignup() {
+            const name = document.getElementById('signupName').value;
+            const phone = document.getElementById('signupPhone').value;
+            const aadhaar = document.getElementById('signupAadhaar').value;
+            const email = document.getElementById('signupEmail').value;
+            const city = document.getElementById('signupCity').value;
+            const state = document.getElementById('signupState').value;
+            const pincode = document.getElementById('signupPincode').value;
+            
+            // Validation
+            if (!name) {
+                showMessage('कृपया अपना नाम दर्ज करें', 'error');
+                return;
+            }
+            
+            if (!phone || phone.length !== 10) {
+                showMessage('कृपया सही मोबाइल नंबर दर्ज करें (10 अंक)', 'error');
+                return;
+            }
+            
+            if (!aadhaar || aadhaar.length !== 12) {
+                showMessage('कृपया सही आधार नंबर दर्ज करें (12 अंक)', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('OTP भेजा जा रहा है...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phone,
+                        aadhaar_number: aadhaar,
+                        name: name,
+                        email: email || null,
+                        city: city || null,
+                        state: state || null,
+                        pincode: pincode || null,
+                        preferred_language: 'hi'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    signupData = data.signup_data;
+                    document.getElementById('signupForm').classList.add('hidden');
+                    document.getElementById('signupOtpForm').classList.remove('hidden');
+                    document.getElementById('signupPhoneDisplay').textContent = data.phone;
+                    
+                    if (data.otp_demo) {
+                        showMessage(`OTP: ${data.otp_demo}`, 'success');
+                    } else {
+                        showMessage('OTP आपके मोबाइल पर भेजा गया है', 'success');
+                    }
+                } else {
+                    showMessage(data.error || 'Signup failed', 'error');
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                showMessage('कनेक्शन में समस्या है', 'error');
+            }
+        }
+        
+        async function verifySignupOTP() {
+            const phone = document.getElementById('signupPhone').value;
+            const otp = document.getElementById('signupOtp').value;
+            
+            if (!otp || otp.length !== 6) {
+                showMessage('कृपया 6 अंकों का OTP दर्ज करें', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('OTP सत्यापित किया जा रहा है...', 'info');
+                
+                const response = await fetch(`${API_BASE}/auth/signup/verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: phone,
+                        otp: otp,
+                        signup_data: signupData
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userProfile', JSON.stringify(data.user_profile));
+                    
+                    showMessage('खाता सफलतापूर्वक बनाया गया!', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                } else {
+                    showMessage(data.error || 'OTP सत्यापन विफल', 'error');
+                }
+            } catch (error) {
+                console.error('OTP verification error:', error);
+                showMessage('कनेक्शन में समस्या है', 'error');
+            }
+        }
+        
+        // Language Switcher Functions
+        function toggleLangDropdown() {
+            const dropdown = document.getElementById('langDropdown');
+            dropdown.classList.toggle('active');
+        }
+        
+        function populateLanguages() {
+            const dropdown = document.getElementById('langDropdown');
+            const languages = getAvailableLanguages();
+            const currentLang = getCurrentLanguage();
+            
+            dropdown.innerHTML = languages.map(lang => `
+                <div class="lang-option ${lang.code === currentLang ? 'active' : ''}" 
+                     onclick="changeLang('${lang.code}')">
+                    <span class="lang-flag">${lang.flag}</span>
+                    <span class="lang-name">${lang.name}</span>
+                    ${lang.code === currentLang ? '<span class="lang-check">✓</span>' : ''}
+                </div>
+            `).join('');
+        }
+        
+        function changeLang(langCode) {
+            setLanguage(langCode);
+            updateCurrentLangDisplay();
+            populateLanguages();
+            toggleLangDropdown();
+        }
+        
+        function updateCurrentLangDisplay() {
+            const currentLang = getCurrentLanguage();
+            const langData = translations[currentLang];
+            
+            document.getElementById('currentLangFlag').textContent = langData.flag;
+            document.getElementById('currentLangName').textContent = langData.name;
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const switcher = document.querySelector('.lang-switcher');
+            const dropdown = document.getElementById('langDropdown');
+            
+            if (switcher && !switcher.contains(e.target)) {
+                dropdown.classList.remove('active');
+            }
+        });
+        
+        // Initialize language switcher on load
+        window.addEventListener('load', () => {
+            populateLanguages();
+            updateCurrentLangDisplay();
+        });
+    </script>
+</body>
+</html>
